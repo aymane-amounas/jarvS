@@ -31,6 +31,14 @@ The model proposes actions. The Rust runtime decides whether they happen.
 
 **Autonomy without giving up control.**
 
+## At a glance
+
+| Name | What it does | Stack | Demo |
+|---|---|---|---|
+| **jarvS** | Local-first personal AI agent: Python reasoning, Rust-gated execution, permissioned tools, WhatsApp control | Rust · Python · LangGraph · Ollama · SQLite | [Recorded session](docs/DEMO.md) · [See it run](#see-it-run) |
+
+> No hosted link: jarvS runs on your own machine. The reproducible local demo is the recorded session in [`docs/DEMO.md`](docs/DEMO.md), summarized with a dashboard screenshot under [See it run](#see-it-run).
+
 ## See it run
 
 <p align="center">
