@@ -1,0 +1,44 @@
+name: Bug report
+description: Something in jarvS does not work as documented
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Security problem? Do not file it here. Use a [private report](https://github.com/aymane-amounas/jarvS/security/advisories/new).
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `jarvs status`
+    validations:
+      required: true
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: Output of `jarvs hardware`, Ollama model(s) used, channel (terminal / WhatsApp)
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Relevant lines from `jarvs run` output and `logs/worker.log`. Remove phone numbers, tokens, and private content.
+      render: text
