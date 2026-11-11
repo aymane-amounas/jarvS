@@ -31,6 +31,25 @@ The model proposes actions. The Rust runtime decides whether they happen.
 
 **Autonomy without giving up control.**
 
+## See it run
+
+<p align="center">
+  <img src="assets/screenshots/dashboard.png" alt="jarvS read-only dashboard after a task" width="720">
+</p>
+
+A recorded session ([docs/DEMO.md](docs/DEMO.md)) on an 8 GB Apple M3 with a 3B local model: the agent tries to write a file outside its workspace, the call is held for approval, the workspace guard still blocks it after approval, a retry is denied, and every decision lands in the audit log.
+
+```console
+$ jarvs run 'Create a file named hello.txt in the workspace containing the text: hello from jarvS'
+  [start] graph
+  tool get_system_state: Executed
+  approval needed: write_file(content=<16 chars>, path=".../jarvS/hello.txt")  -> `jarvs approve 18e7…` or `jarvs deny 18e7…`
+  tool write_file: Executed            # approved, but outside the workspace: nothing written
+  approval needed: write_file(...)     # model retries
+  tool write_file: Denied
+status: Incomplete, 3 tool call(s)
+```
+
 ## Features
 
 - **Local AI:** Run models through Ollama, with separate planning and fast models.
@@ -183,6 +202,10 @@ See [Security boundaries](docs/SECURITY.md) for platform-specific guarantees and
 | Linux | Tested in CI | Ubuntu + systemd |
 | macOS | Tested in CI | Manual |
 | Windows | Tested in CI | Manual |
+
+CI runs the Rust and Python test suites on all three platforms on every push.
+
+**Hardware actually tested end to end:** Apple M3, 8 GB unified memory, macOS 27.2, Ollama with `qwen2.5-coder:3b` ([session](docs/DEMO.md)). Linux and Windows have passed CI but have not had a full end-to-end run with a local model yet.
 
 CI coverage does not imply that every integration is supported on every platform.
 
