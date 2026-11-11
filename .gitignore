@@ -1,0 +1,55 @@
+# runtime env / secrets -- never commit
+.env
+gmail_credentials.json
+gmail_token.json
+
+# python
+.venv/
+__pycache__/
+*.pyc
+
+# runtime state (lives under $JARVIS_HOME, which is this checkout on the box)
+logs/
+journal/
+voices/*.onnx
+voices/*.onnx.json
+voices/*.bin
+vector_store/
+tools_pending/
+tools_custom/
+state.db
+checkpoints.db
+
+# whatsapp bridge (Node/Baileys) -- built by deploy.sh/install.sh, and the
+# WhatsApp session itself must never be committed
+channels/bridge/node_modules/
+channels/bridge/dist/
+channels/bridge/package-lock.json
+channels/bridge/auth_info_baileys/
+
+# os
+.DS_Store
+
+# personal config and data -- keep local, never publish
+missions.yaml
+bookmarks.html
+analysis_results.txt
+gmail_credentials*.json
+gmail_token*.json
+
+# sqlite sidecar files
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+
+# agent-generated scratch output
+mt5_gold_data_fetcher.sh
+
+# tooling
+.ruff_cache/
+.pytest_cache/
+._*
+
+# rust build output
+/target/

@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="jarvS">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0E1A36"/>
+      <stop offset="1" stop-color="#081024"/>
+    </linearGradient>
+    <linearGradient id="orbit" x1="0.15" y1="0.1" x2="0.85" y2="0.9">
+      <stop offset="0" stop-color="#14B8A6"/>
+      <stop offset="1" stop-color="#5EEAF5"/>
+    </linearGradient>
+    <radialGradient id="core" cx="0.4" cy="0.35" r="0.75">
+      <stop offset="0" stop-color="#A5F3FC"/>
+      <stop offset="1" stop-color="#22D3EE"/>
+    </radialGradient>
+  </defs>
+
+  <!-- tile -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+
+  <!-- enclosure: everything runs inside your own machine -->
+  <polygon points="256,60 425.74,158 425.74,354 256,452 86.26,354 86.26,158"
+           fill="none" stroke="#1C3F5E" stroke-width="10" stroke-linejoin="round"/>
+
+  <!-- links from the core to each node -->
+  <g stroke="#2DD4BF" stroke-opacity="0.5" stroke-width="8" stroke-linecap="round">
+    <line x1="256" y1="256" x2="256" y2="152"/>
+    <line x1="256" y1="256" x2="346" y2="308"/>
+    <line x1="256" y1="256" x2="166" y2="308"/>
+  </g>
+
+  <!-- orbit: the automation loop -->
+  <g fill="none" stroke="url(#orbit)" stroke-width="22" stroke-linecap="round">
+    <path d="M287.06 140.09 A120 120 0 0 1 371.91 287.06"/>
+    <path d="M340.85 340.85 A120 120 0 0 1 171.15 340.85"/>
+    <path d="M140.09 287.06 A120 120 0 0 1 224.94 140.09"/>
+  </g>
+
+  <!-- nodes: connected channels and devices -->
+  <g fill="#0B1530" stroke="#5EEAF5" stroke-width="8">
+    <circle cx="256" cy="136" r="19"/>
+    <circle cx="359.92" cy="316" r="19"/>
+    <circle cx="152.08" cy="316" r="19"/>
+  </g>
+
+  <!-- core: local intelligence -->
+  <circle cx="256" cy="256" r="38" fill="url(#core)"/>
+  <circle cx="256" cy="256" r="13" fill="#0B1530"/>
+</svg>

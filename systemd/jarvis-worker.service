@@ -1,0 +1,21 @@
+[Unit]
+Description=jarvS autonomous worker
+After=network-online.target ollama.service
+Wants=network-online.target ollama.service
+
+[Service]
+Type=simple
+User=jarvis
+WorkingDirectory=/home/jarvis/jarvis
+EnvironmentFile=/home/jarvis/jarvis/.env
+Environment=PYTHONUNBUFFERED=1
+Environment=JARVS_PYTHON_DIR=/home/jarvis/jarvis
+Environment=JARVIS_HOME=/home/jarvis/jarvis
+ExecStart=/home/jarvis/jarvis/target/release/jarvs daemon
+Restart=always
+RestartSec=10
+TimeoutStopSec=30
+KillMode=mixed
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,19 @@
+[Unit]
+Description=jarvS WhatsApp channel
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=jarvis
+WorkingDirectory=/home/jarvis/jarvis
+EnvironmentFile=/home/jarvis/jarvis/.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/jarvis/jarvis/.venv/bin/python /home/jarvis/jarvis/channels/wa.py
+Restart=always
+RestartSec=10
+TimeoutStopSec=15
+KillMode=mixed
+
+[Install]
+WantedBy=multi-user.target

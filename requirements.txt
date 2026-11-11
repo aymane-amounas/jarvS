@@ -1,0 +1,24 @@
+langgraph>=0.2
+langgraph-checkpoint-sqlite
+# langgraph-sdk (a langgraph dependency) conflicts with websockets 17.1 --
+# pin below 17 until upstream sorts that out.
+websockets<17
+pyyaml
+requests
+ddgs>=9,<10
+faster-whisper
+python-dotenv
+
+# Phase 2: web perception and ecosystem access
+playwright
+google-api-python-client
+google-auth
+google-auth-oauthlib
+# gh CLI itself is a system package (see install.sh), not pip-installed
+
+# Phase 4: dashboard
+fastapi
+uvicorn[standard]
+# kokoro-onnx + soundfile (optional voice engine) are installed separately
+# by install.sh, with a soft failure -- piper remains the default and does
+# not depend on them.

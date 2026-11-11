@@ -1,0 +1,17 @@
+[Unit]
+Description=jarvS read-only dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=jarvis
+WorkingDirectory=/home/jarvis/jarvis
+EnvironmentFile=/home/jarvis/jarvis/.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/jarvis/jarvis/.venv/bin/uvicorn dashboard:app --host 127.0.0.1 --port ${JARVIS_DASHBOARD_PORT}
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,21 @@
+jarvS notices
+
+Copyright
+Copyright 2026 Aymane Amounas for original project material, to the extent
+owned by the author. Third-party components retain their own copyright owners
+and notices.
+
+Project license and attribution
+Original jarvS material is offered under the Aymane Amounas Noncommercial
+Attribution License 1.0 in LICENSE. This NOTICE is informational; the license
+sets the terms and required downstream attribution.
+
+Required downstream attribution when distributing substantial portions:
+    Based on jarvS by Aymane Amounas
+    https://github.com/aymane-amounas/jarvS
+
+Third-party notices
+Dependencies and other third-party material are not relicensed by the project
+license. Their own licenses, copyright notices, and attribution requirements
+continue to apply. See docs/THIRD_PARTY.md and the notices distributed with
+each third-party component. Nothing in this NOTICE replaces those terms.

@@ -1,0 +1,41 @@
+# Example jarvS missions. Copy to missions.yaml (git-ignored) and edit:
+#   cp missions.example.yaml missions.yaml
+# Without a missions.yaml, jarvS only answers direct requests.
+
+work_cycle:
+  start: "09:00" # machine local time
+  work_hours: 8
+  rest_hours: 16
+
+reports:
+  autonomous: short
+
+# Note: this policy is passed to the model as guidance; it is not yet enforced
+# by code. Keep the shell tool disabled (the default) unless you need it.
+autonomy:
+  mode: supervised
+  scope: >
+    Work only on the missions listed below. Do not add or change missions,
+    install software, or modify files outside the jarvS home without asking
+    the owner first.
+  reporting: >
+    Send short reports with the result, key evidence, and source links.
+
+missions:
+  - id: daily-research
+    goal: Find the most important developments of the last day on a topic the owner cares about (edit this goal). Prefer primary sources and note publication dates.
+    done: A short brief lists 3-5 findings with source links, or says that nothing notable was found.
+    every_hours: 24
+    output: short
+
+  - id: learning
+    goal: Learn one software-engineering concept and connect it to a small, checked example.
+    done: A concise note explains the concept, cites a reliable source, and includes a checked example.
+    every_hours: 48
+    output: short
+
+  - id: system-health
+    goal: Check this computer's health using get_system_state - free disk space, available memory, and recent jarvS errors in the workspace. Report only when something needs attention (for example under 10% disk free or repeated failures).
+    done: A one-line status, or a short list of concrete issues with the measured values.
+    every_hours: 24
+    output: short

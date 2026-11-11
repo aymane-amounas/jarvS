@@ -1,0 +1,25 @@
+[package]
+name = "jarvs-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+license-file.workspace = true
+readme.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+clap = { version = "4.6.7", features = ["derive"] }
+ctrlc = { version = "3.5.2", features = ["termination"] }
+jarvs-core = { version = "0.1.0", path = "../jarvs-core" }
+jarvs-platform = { version = "0.1.0", path = "../jarvs-platform" }
+serde_json = "1.0.154"
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "jarvs"
+path = "src/main.rs"
