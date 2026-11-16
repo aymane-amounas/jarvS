@@ -8,7 +8,6 @@ edition = "2024"
 rust-version = "1.85"
 publish = false
 license = "LicenseRef-Aymane-Noncommercial-Attribution-1.0"
-license-file = "LICENSE"
 readme = "README.md"
 authors = ["Aymane Amounas"]
 repository = "https://github.com/aymane-amounas/jarvS"
