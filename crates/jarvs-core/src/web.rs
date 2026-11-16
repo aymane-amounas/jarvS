@@ -4,11 +4,15 @@
 //! prompt and may contain text that tries to give instructions.
 
 use std::io::Read;
-use std::net::{IpAddr, ToSocketAddrs};
+use std::net::{IpAddr, SocketAddr, ToSocketAddrs};
 use std::time::Duration;
 
 use serde_json::Value;
+use ureq::Error as UreqError;
+use ureq::config::Config as UreqConfig;
 use ureq::http::Uri;
+use ureq::unversioned::resolver::{DefaultResolver, ResolvedSocketAddrs, Resolver};
+use ureq::unversioned::transport::{DefaultConnector, NextTimeout};
 
 const BODY_LIMIT: u64 = 1_000_000;
 const MAX_REDIRECTS: usize = 5;
@@ -28,25 +32,39 @@ impl Default for Web {
 
 impl Web {
     pub fn new() -> Self {
-        let agent = ureq::Agent::config_builder()
+        Self::build(false)
+    }
+
+    #[cfg(test)]
+    fn allowing_private() -> Self {
+        Self::build(true)
+    }
+
+    fn build(allow_private: bool) -> Self {
+        Self::with_resolver(DefaultResolver::default(), allow_private)
+    }
+
+    /// Builds the agent with a given inner name resolver. Production wraps the
+    /// system resolver; tests inject a scripted one to drive rebinding cases.
+    fn with_resolver(inner: impl Resolver, allow_private: bool) -> Self {
+        let config = ureq::Agent::config_builder()
             .timeout_global(Some(Duration::from_secs(20)))
             // Redirects are followed by hand so every hop is checked.
             .max_redirects(0)
             .http_status_as_error(false)
             .user_agent(USER_AGENT)
-            .build()
-            .new_agent();
+            .build();
+        // The resolver is the authority on where a connection may go: ureq
+        // connects to exactly the addresses it returns and never resolves the
+        // host again, so the address vetted here is the address connected to.
+        let resolver = GuardResolver {
+            inner,
+            allow_private,
+        };
+        let agent = ureq::Agent::with_parts(config, DefaultConnector::default(), resolver);
         Self {
             agent,
-            allow_private: false,
-        }
-    }
-
-    #[cfg(test)]
-    fn allowing_private() -> Self {
-        Self {
-            allow_private: true,
-            ..Self::new()
+            allow_private,
         }
     }
 
@@ -249,6 +267,46 @@ pub fn is_public(ip: IpAddr) -> bool {
                 || (first & 0xfe00) == 0xfc00 // unique local
                 || (first & 0xffc0) == 0xfe80) // link local
         }
+    }
+}
+
+/// Name resolver that drops every non-public address before ureq can connect
+/// to it. Because ureq uses this resolver's output verbatim and never resolves
+/// the host a second time, the public/private decision made here is the one
+/// that governs the actual TCP connection. This closes the DNS-rebinding and
+/// time-of-check/time-of-use gap: a name that resolves to a public address
+/// while `check_url` inspects it, then rebinds to a private address before the
+/// connection, is still refused here, at connect time.
+#[derive(Debug)]
+struct GuardResolver<R: Resolver> {
+    inner: R,
+    /// Tests only: pass private/loopback addresses through unchanged.
+    allow_private: bool,
+}
+
+impl<R: Resolver> Resolver for GuardResolver<R> {
+    fn resolve(
+        &self,
+        uri: &Uri,
+        config: &UreqConfig,
+        timeout: NextTimeout,
+    ) -> Result<ResolvedSocketAddrs, UreqError> {
+        let resolved = self.inner.resolve(uri, config, timeout)?;
+        if self.allow_private {
+            return Ok(resolved);
+        }
+        let mut safe = ResolvedSocketAddrs::from_fn(|_| SocketAddr::from(([0u8, 0, 0, 0], 0)));
+        for addr in resolved.iter() {
+            if is_public(addr.ip()) {
+                safe.push(*addr);
+            }
+        }
+        if safe.is_empty() {
+            // Every resolved address is loopback, private, link-local or
+            // otherwise reserved. Refuse rather than reach an internal host.
+            return Err(UreqError::HostNotFound);
+        }
+        Ok(safe)
     }
 }
 
@@ -464,6 +522,124 @@ mod tests {
     use super::*;
     use std::io::Write;
     use std::net::TcpListener;
+    use std::sync::Mutex;
+
+    /// Inner resolver that replays a scripted sequence of answers, one list of
+    /// addresses per `resolve` call. Lets a test make a host resolve to a
+    /// public address once and a private address the next time (DNS rebinding).
+    #[derive(Debug)]
+    struct ScriptedResolver {
+        rounds: Mutex<std::vec::IntoIter<Vec<SocketAddr>>>,
+    }
+
+    fn scripted(rounds: &[&[&str]]) -> ScriptedResolver {
+        let rounds: Vec<Vec<SocketAddr>> = rounds
+            .iter()
+            .map(|round| round.iter().map(|a| a.parse().unwrap()).collect())
+            .collect();
+        ScriptedResolver {
+            rounds: Mutex::new(rounds.into_iter()),
+        }
+    }
+
+    impl Resolver for ScriptedResolver {
+        fn resolve(
+            &self,
+            _uri: &Uri,
+            _config: &UreqConfig,
+            _timeout: NextTimeout,
+        ) -> Result<ResolvedSocketAddrs, UreqError> {
+            let round = self
+                .rounds
+                .lock()
+                .unwrap()
+                .next()
+                .expect("resolver called more times than scripted");
+            let mut addrs = ResolvedSocketAddrs::from_fn(|_| SocketAddr::from(([0u8, 0, 0, 0], 0)));
+            for addr in round {
+                addrs.push(addr);
+            }
+            Ok(addrs)
+        }
+    }
+
+    fn guard_resolve(
+        inner: ScriptedResolver,
+        allow_private: bool,
+    ) -> GuardResolver<ScriptedResolver> {
+        GuardResolver {
+            inner,
+            allow_private,
+        }
+    }
+
+    fn resolve_once(
+        guard: &GuardResolver<ScriptedResolver>,
+    ) -> Result<ResolvedSocketAddrs, UreqError> {
+        let uri: Uri = "https://host.example/".parse().unwrap();
+        guard.resolve(&uri, &UreqConfig::default(), NextTimeout::default())
+    }
+
+    #[test]
+    fn guard_resolver_keeps_public_and_drops_everything_else() {
+        let guard = guard_resolve(
+            scripted(&[&[
+                "10.0.0.1:80",
+                "93.184.216.34:80",
+                "169.254.1.1:80",
+                "[::1]:80",
+            ]]),
+            false,
+        );
+        let out = resolve_once(&guard).unwrap();
+        assert_eq!(out.len(), 1);
+        assert_eq!(out[0].ip().to_string(), "93.184.216.34");
+    }
+
+    #[test]
+    fn guard_resolver_refuses_when_every_address_is_private() {
+        let guard = guard_resolve(scripted(&[&["127.0.0.1:443", "10.1.2.3:443"]]), false);
+        assert!(matches!(resolve_once(&guard), Err(UreqError::HostNotFound)));
+    }
+
+    #[test]
+    fn guard_resolver_blocks_dns_rebinding_between_resolutions() {
+        // First lookup returns a public address and is allowed; a later lookup
+        // for the same host rebinds to loopback and must be refused.
+        let guard = guard_resolve(
+            scripted(&[&["93.184.216.34:443"], &["127.0.0.1:443"]]),
+            false,
+        );
+        let first = resolve_once(&guard).expect("public address is allowed");
+        assert_eq!(first.len(), 1);
+        assert!(is_public(first[0].ip()));
+        assert!(
+            matches!(resolve_once(&guard), Err(UreqError::HostNotFound)),
+            "a rebind to a private address must be refused at resolve time"
+        );
+    }
+
+    #[test]
+    fn guard_resolver_passes_private_through_only_in_test_mode() {
+        let guard = guard_resolve(scripted(&[&["127.0.0.1:80"]]), true);
+        let out = resolve_once(&guard).unwrap();
+        assert_eq!(out.len(), 1);
+        assert_eq!(out[0].ip().to_string(), "127.0.0.1");
+    }
+
+    #[test]
+    fn fetch_refuses_private_address_from_the_resolver_even_past_url_checks() {
+        // The URL host is a public IP literal, so check_url passes it, but the
+        // resolver returns a private address for the connection. This proves the
+        // real agent connects only to addresses the resolver approved: there is
+        // no path where ureq re-resolves and reaches the private host.
+        let web = Web::with_resolver(scripted(&[&["127.0.0.1:80"]]), false);
+        let err = web.fetch("http://93.184.216.34/").unwrap_err();
+        assert!(
+            err.contains("fetch failed"),
+            "connection must fail at the resolver: {err}"
+        );
+    }
 
     const HTML: &str = r#"<div class="result"><h2><a rel="nofollow" class="result__a" href="https://example.org/a?x=1&amp;y=2">Example &amp; <b>Title</b></a></h2>
 <a class="result__snippet" href="https://example.org/a">A <b>bold</b> snippet &#x27;quoted&#x27;</a></div>
