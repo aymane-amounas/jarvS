@@ -8,7 +8,7 @@ Before running it:
   1. In Google Cloud Console, create (or use) a project and enable the
      Gmail API.
   2. Create an OAuth client of type "Desktop app".
-  3. Download its JSON and save it as the jarvS home directory as gmail_credentials.json.
+  3. Download its JSON and save it in the jarvS home directory as gmail_credentials.json.
 """
 from __future__ import annotations
 
@@ -41,9 +41,10 @@ def main() -> None:
     creds = flow.run_local_server(port=0)
     TOKEN.write_text(creds.to_json(), encoding="utf-8")
     print(f"wrote {TOKEN}")
-    print("gmail_search / gmail_summarize_unread / gmail_draft are live now.")
-    print("Reminder: this integration can create Gmail drafts but will never "
-         "send anything -- see tools/gmail_ops.py.")
+    print(
+        "Token saved. Gmail actions are not yet wired into jarvS; this "
+        "credential is ready for when they are."
+    )
 
 
 if __name__ == "__main__":
