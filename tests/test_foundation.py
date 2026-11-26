@@ -187,6 +187,8 @@ print(json.dumps(results))
 
             if "Failed RTM_NEWADDR: Operation not permitted" in result.stderr:
                 self.skipTest("runner does not permit Bubblewrap network namespace setup")
+            if "bwrap: execvp" in result.stderr:
+                self.skipTest("runner does not expose the interpreter path inside Bubblewrap")
             self.assertEqual(result.returncode, 0, result.stderr)
             observed = json.loads(result.stdout)
             self.assertEqual(observed, {
