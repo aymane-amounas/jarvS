@@ -26,6 +26,17 @@ class MemoryTests(unittest.TestCase):
         self.assertEqual(len(memory.journal_tail("sample", limit=1200)), 1200)
         self.assertEqual(len(memory.recent_journal_entries("sample", limit=1)), 1)
 
+    def test_journal_mission_cannot_escape_journal_dir(self):
+        memory.journal_append("../../escape", "leak")
+        # Nothing is written outside the journal directory.
+        self.assertFalse((memory.JOURNAL.parent / "escape.md").exists())
+        self.assertFalse((memory.JOURNAL.parent.parent / "escape.md").exists())
+        # The sanitized file stays inside JOURNAL and round-trips on read.
+        written = list(memory.JOURNAL.glob("*.md"))
+        self.assertEqual(len(written), 1)
+        self.assertEqual(written[0].parent, memory.JOURNAL)
+        self.assertIn("leak", memory.journal_tail("../../escape"))
+
     def test_connections_are_closed(self):
         with memory.conn() as c:
             c.execute("SELECT 1")

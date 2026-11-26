@@ -8,7 +8,10 @@ use std::net::{IpAddr, ToSocketAddrs};
 use std::time::Duration;
 
 use serde_json::Value;
+use ureq::config::Config;
 use ureq::http::Uri;
+use ureq::unversioned::resolver::{DefaultResolver, ResolvedSocketAddrs, Resolver};
+use ureq::unversioned::transport::{DefaultConnector, NextTimeout};
 
 const BODY_LIMIT: u64 = 1_000_000;
 const MAX_REDIRECTS: usize = 5;
@@ -28,16 +31,8 @@ impl Default for Web {
 
 impl Web {
     pub fn new() -> Self {
-        let agent = ureq::Agent::config_builder()
-            .timeout_global(Some(Duration::from_secs(20)))
-            // Redirects are followed by hand so every hop is checked.
-            .max_redirects(0)
-            .http_status_as_error(false)
-            .user_agent(USER_AGENT)
-            .build()
-            .new_agent();
         Self {
-            agent,
+            agent: build_agent(false),
             allow_private: false,
         }
     }
@@ -45,8 +40,8 @@ impl Web {
     #[cfg(test)]
     fn allowing_private() -> Self {
         Self {
+            agent: build_agent(true),
             allow_private: true,
-            ..Self::new()
         }
     }
 
@@ -186,6 +181,68 @@ impl Web {
             items.join("\n\n")
         ))
     }
+}
+
+/// Build the HTTP agent. Outside tests the DNS resolver drops every private,
+/// loopback or metadata address at connection time, so a name that passed the
+/// pre-flight check in `check_url` but then resolves to a local address (DNS
+/// rebinding) still cannot be reached.
+fn build_agent(allow_private: bool) -> ureq::Agent {
+    let config = ureq::Agent::config_builder()
+        .timeout_global(Some(Duration::from_secs(20)))
+        // Redirects are followed by hand so every hop is checked.
+        .max_redirects(0)
+        .http_status_as_error(false)
+        .user_agent(USER_AGENT)
+        .build();
+    if allow_private {
+        ureq::Agent::with_parts(
+            config,
+            DefaultConnector::default(),
+            DefaultResolver::default(),
+        )
+    } else {
+        ureq::Agent::with_parts(
+            config,
+            DefaultConnector::default(),
+            PublicOnlyResolver::default(),
+        )
+    }
+}
+
+/// Forwards to the default resolver, then drops any address that is not
+/// publicly routable. ureq connects to exactly the addresses a resolver
+/// returns, so the IP vetted here is the IP used for the connection: unlike the
+/// pre-flight check in `check_url`, there is no second resolution that an
+/// attacker-controlled DNS answer can rebind in between.
+#[derive(Debug, Default)]
+struct PublicOnlyResolver {
+    inner: DefaultResolver,
+}
+
+impl Resolver for PublicOnlyResolver {
+    fn resolve(
+        &self,
+        uri: &Uri,
+        config: &Config,
+        timeout: NextTimeout,
+    ) -> Result<ResolvedSocketAddrs, ureq::Error> {
+        let public = retain_public(&self.inner.resolve(uri, config, timeout)?);
+        if public.is_empty() {
+            return Err(ureq::Error::HostNotFound);
+        }
+        Ok(public)
+    }
+}
+
+fn retain_public(addrs: &ResolvedSocketAddrs) -> ResolvedSocketAddrs {
+    let mut kept = DefaultResolver::default().empty();
+    for addr in addrs.iter() {
+        if is_public(addr.ip()) {
+            kept.push(*addr);
+        }
+    }
+    kept
 }
 
 fn read_limited(response: &mut ureq::http::Response<ureq::Body>) -> Result<Vec<u8>, String> {
@@ -526,6 +583,23 @@ mod tests {
         for ip in ["8.8.8.8", "1.1.1.1", "2606:4700:4700::1111"] {
             assert!(is_public(ip.parse().unwrap()), "{ip}");
         }
+    }
+
+    #[test]
+    fn resolver_drops_private_and_metadata_addresses() {
+        let mut addrs = DefaultResolver::default().empty();
+        for addr in [
+            "127.0.0.1:80",
+            "8.8.8.8:80",
+            "169.254.169.254:80",
+            "10.0.0.5:80",
+            "[::1]:80",
+        ] {
+            addrs.push(addr.parse().unwrap());
+        }
+        let kept = retain_public(&addrs);
+        assert_eq!(kept.len(), 1);
+        assert_eq!(kept[0], "8.8.8.8:80".parse().unwrap());
     }
 
     #[test]
