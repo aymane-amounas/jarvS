@@ -40,6 +40,18 @@ These limits mitigate memory exhaustion from oversized or queued messages; they
 are not a substitute for authenticating the process endpoint. IPC uses local
 stdin/stdout pipes between the Rust runtime and the child process.
 
+## Web access
+
+Native `fetch`, `search_web`, and `search_news` use http/https only, cap bodies
+at 1 MB, and follow redirects by hand so every hop is re-checked. Two layers
+block local-network and metadata targets: a pre-flight check on the URL, and a
+DNS resolver that drops every private, loopback, or metadata address at the
+moment of connection. Because ureq connects to exactly the addresses the
+resolver returns, the vetted address is the one used, which closes the
+DNS-rebinding window between a pre-flight check and the actual connection.
+Returned content is labelled untrusted before it enters any prompt; the runtime
+treats it as data, not instructions.
+
 ## Approval integrity
 
 Approval decisions are created once and cannot overwrite an existing decision.

@@ -72,6 +72,37 @@ status: Incomplete, 3 tool call(s)
 - **Audit logging:** Record execution decisions without storing message bodies or file contents.
 - **Dashboard:** Inspect recent activity through a local, read-only interface.
 
+## Feature maturity
+
+Status is honest about what has actually run. Implemented means built and
+covered by tests or a recorded run. Experimental means it works but has a known
+limitation. Planned means not built yet.
+
+| Capability | Status | Evidence |
+|---|---|---|
+| Rust execution runtime (supervisor, handshake, timeout, cancel, kill) | Implemented | `jarvs-core/worker.rs`, `jarvs-cli/tests/cli.rs` (real binary + Python) |
+| Permission control (allow / approval / deny, shell locked off) | Implemented | `jarvs-core/permissions.rs` unit tests |
+| Workspace guard (traversal, absolute, symlink, sensitive names; re-checked after approval) | Implemented | `jarvs-core/workspace.rs`, `tools.rs` confinement tests |
+| Web research (native `fetch`, `search_web`, `search_news`; SSRF-guarded, private/metadata IPs blocked at resolution) | Implemented | `jarvs-core/web.rs` unit + live tests |
+| Local inference via Ollama (separate plan and fast models) | Implemented | `llm.py`; recorded M3 session in [docs/DEMO.md](docs/DEMO.md) |
+| Persistent missions and autonomous work cycle | Implemented | `graph.py` decide loop, `worker.py` cycle, `memory.py` runs/journal |
+| Audit logging (decisions only, no argument values) | Implemented | `jarvs-core/audit.rs` unit + CLI tests |
+| Read-only dashboard | Implemented | `dashboard.py`; screenshot above |
+| Custom Python tools (syntax-restricted, test-gated, OS-sandboxed) | Experimental | macOS Seatbelt / Linux Bubblewrap; Windows disabled, fails closed. Not independently assessed. See [docs/SECURITY.md](docs/SECURITY.md) |
+| Messaging integrations (WhatsApp in, replies out) | Experimental | `channels/wa.py` + Baileys bridge; the legacy channel loop runs outside the Rust gate |
+| Email (Gmail) and browser automation | Planned | `gmail_setup.py` OAuth helper only; Playwright installed but not wired to a tool |
+
+## jarvS and Venus Agent
+
+jarvS is the end-user assistant: an opinionated personal agent you run on your
+own machine, with WhatsApp control, standing missions, and a fixed tool set.
+
+Venus Agent is the reusable runtime underneath that idea: the permission gate,
+IPC boundary, and native tool execution as a library other projects can build
+on. jarvS is one application of that runtime, not the runtime itself. If you
+want the assistant, use jarvS. If you want to embed gated execution in your own
+agent, that is Venus Agent's job.
+
 ## Architecture
 
 jarvS has three main layers:
@@ -221,6 +252,7 @@ CI coverage does not imply that every integration is supported on every platform
 
 - [Architecture](docs/ARCHITECTURE.md)
 - [IPC Protocol](docs/IPC_PROTOCOL.md)
+- [Memory and stored state](docs/MEMORY.md)
 - [Implementation Status](docs/IMPLEMENTATION_STATUS.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Security boundaries](docs/SECURITY.md)

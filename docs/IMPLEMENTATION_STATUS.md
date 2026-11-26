@@ -54,7 +54,10 @@ pytest -q tests                     23 passed
 - Windows/Linux: CI runs on push; see the GitHub Actions results.
 - Approval-only delegated tools (custom tools, package install, project checks) run in Python with full rights once approved; real OS isolation is P3.
 - The approval queue has no push notification yet; the owner has to check `jarvs approvals` (the daemon logs each request).
-- DNS rebinding: an address is checked before the request, and ureq resolves again when it connects.
+- DNS rebinding: the fetch agent now resolves through a filtering resolver that
+  drops private, loopback, and metadata addresses at connection time, so the
+  vetted IP is the one connected to. The pre-flight `check_url` stays as an early
+  reject. Covered by `web.rs` `resolver_drops_private_and_metadata_addresses`.
 
 
 ## Milestone 1: P0 fixes, Rust foundation, Python bridge (2026-11-08)
