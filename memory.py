@@ -209,9 +209,20 @@ def recent(limit: int = 8):
 
 # ---------- journal: how tomorrow's run knows what today found ----------
 
+def _journal_file(mission: str) -> pathlib.Path:
+    """Map a mission id to a file inside JOURNAL, never outside it.
+
+    Mission ids added through add_goal are slugs, but missions.yaml is
+    hand-edited, so a stray `/` or `..` must not turn into a write outside the
+    journal. Keep only safe characters and resolve the result under JOURNAL.
+    """
+    stem = re.sub(r"[^a-z0-9_-]", "_", (mission or "").lower()).strip("._-") or "misc"
+    return JOURNAL / f"{stem[:64]}.md"
+
+
 def journal_append(mission: str, text: str) -> None:
     JOURNAL.mkdir(parents=True, exist_ok=True)
-    f = JOURNAL / f"{mission}.md"
+    f = _journal_file(mission)
     stamp = dt.datetime.now().strftime("%Y-%m-%d %H:%M")
     with f.open("a", encoding="utf-8") as fh:
         fh.write(f"\n## {stamp}\n{text.strip()}\n")
@@ -233,7 +244,7 @@ def _read_tail(path: pathlib.Path, max_bytes: int) -> str:
 def journal_tail(mission: str, limit: int = 1200) -> str:
     if limit <= 0:
         return ""
-    f = JOURNAL / f"{mission}.md"
+    f = _journal_file(mission)
     if not f.exists():
         return "(no previous notes)"
     return _read_tail(f, max(4096, limit * 4))[-limit:]
