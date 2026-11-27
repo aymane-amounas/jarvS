@@ -1,6 +1,6 @@
 # Implementation status
 
-Only what was actually run is recorded as tested.
+The rule I hold myself to here: only what I actually ran gets recorded as tested.
 
 ## v0.2 runtime hardening (in progress)
 
@@ -16,12 +16,12 @@ Only what was actually run is recorded as tested.
 
 ### Not complete
 
-- Linux CI installed Bubblewrap but the runner denied network namespace setup (`Failed RTM_NEWADDR: Operation not permitted`); sandbox execution was therefore not exercised there.
+- Linux CI installed Bubblewrap but the runner denied network namespace setup (`Failed RTM_NEWADDR: Operation not permitted`), so sandbox execution was not exercised there.
 - Python CI on Ubuntu/macOS/Windows also reported a Ruff import-order issue in the adversarial sandbox test; that import block is now corrected and passes the CI Ruff command locally.
-- Windows has no OS isolation backend; custom Python tool execution fails closed.
+- Windows has no OS isolation backend, so custom Python tool execution fails closed.
 - No independent macOS sandbox escape assessment or kernel-level adversarial review has been performed.
-- Mission checkpointing/idempotency for work interrupted after external side effects remains unimplemented.
-- The latest macOS CI attempt failed during dependency/action downloads because hosted runners could not resolve PyPI and GitHub archive hosts; macOS CI remains unverified.
+- Mission checkpointing/idempotency for work interrupted after external side effects is still unimplemented.
+- The latest macOS CI attempt failed during dependency/action downloads because hosted runners could not resolve PyPI and GitHub archive hosts, so macOS CI remains unverified.
 
 ## Milestone 2: gaps closed, license, brand (2026-11-08)
 
@@ -53,7 +53,7 @@ pytest -q tests                     23 passed
 ### Still open
 - Windows/Linux: CI runs on push; see the GitHub Actions results.
 - Approval-only delegated tools (custom tools, package install, project checks) run in Python with full rights once approved; real OS isolation is P3.
-- The approval queue has no push notification yet; the owner has to check `jarvs approvals` (the daemon logs each request).
+- The approval queue has no push notification yet, so the owner has to check `jarvs approvals` (the daemon logs each request).
 - DNS rebinding: the fetch agent now resolves through a filtering resolver that
   drops private, loopback, and metadata addresses at connection time, so the
   vetted IP is the one connected to. The pre-flight `check_url` stays as an early

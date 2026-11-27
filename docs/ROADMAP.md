@@ -1,8 +1,9 @@
 # jarvS roadmap
 
-Each phase lists what it depends on and testable acceptance criteria. A phase is
-done when its criteria pass in CI on Ubuntu, macOS and Windows, not when its files
-exist. Progress lives in [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md).
+Each phase here lists what it depends on and the acceptance criteria I can
+actually test. The rule I care about: a phase is done when its criteria pass in
+CI on Ubuntu, macOS and Windows, not when the files for it exist. Where things
+actually stand lives in [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md).
 
 | Phase | Depends on | Delivers |
 |---|---|---|
@@ -20,7 +21,7 @@ exist. Progress lives in [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md).
 | P11 Public release | all | Installers, upgrade path, security review |
 
 ## v0.2: Runtime Hardening
-- Hardening milestone focused on trust, not autonomy: every security boundary is verified with an adversarial test.
+- This milestone is about trust, not autonomy: the goal is that every security boundary gets an adversarial test behind it.
 - [x] Adversarial macOS smoke tests demonstrate representative file, environment, network, and process restrictions under Seatbelt.
 - [x] Linux Bubblewrap backend is wired and fails closed if `bwrap` is unavailable; Linux execution still needs CI validation.
 - [x] Custom-tool execution fails closed on Windows until a real OS isolation backend exists.
@@ -90,4 +91,4 @@ exist. Progress lives in [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md).
 - *Accept:* scheduler restart-recovery test; notification cap test across two channels.
 
 ## P7–P11
-Specified in the product brief. They will be broken into criteria like the above when P6 is done.
+These are specified in the product brief. I will break them into criteria like the ones above once P6 is done.

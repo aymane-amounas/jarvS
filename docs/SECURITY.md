@@ -1,14 +1,15 @@
 # Security boundaries
 
-jarvS is under active hardening. The controls below reduce risk; they do not
-make a model, worker, or operating system compromise-proof. In particular,
-approval is authorization, not isolation.
+jarvS is still being hardened. The controls below reduce risk, but I want to be
+clear that they do not make a model, worker, or operating system
+compromise-proof. The one thing to hold onto: approval is authorization, not
+isolation.
 
 ## Custom Python tools
 
-Custom-tool source is syntax-restricted and each run is placed in a fresh
-temporary directory with a small environment. This validation is defense in
-depth, not a sandbox boundary.
+Custom-tool source is syntax-restricted, and each run goes into a fresh
+temporary directory with a small environment. That validation is defense in
+depth, not a sandbox boundary on its own.
 
 | Platform | Execution behavior | Current boundary and limitation |
 |---|---|---|
@@ -16,16 +17,17 @@ depth, not a sandbox boundary.
 | Linux | Uses Bubblewrap (`bwrap`) when present; otherwise custom-tool execution is disabled. | When the runner permits namespace setup, the process receives a private namespace, no network namespace access, no capabilities, read-only Python/runtime mounts, and a writable temporary work directory. If namespace setup is denied, the tool fails closed. A CI runner with Bubblewrap installed denied loopback setup (`Failed RTM_NEWADDR: Operation not permitted`), so Linux sandbox execution remains unverified. |
 | Windows | Custom-tool execution is disabled. | No AppContainer or equivalent Windows isolation backend is implemented yet. |
 
-Tools requiring approval that are not custom Python tools (for example package
-installation and project checks) do not run inside this custom-tool sandbox.
+Tools that require approval but are not custom Python tools (package
+installation and project checks, for example) do not run inside this custom-tool
+sandbox.
 
 ## Workspace file access
 
 The Rust workspace guard canonicalizes paths and rejects traversal, sensitive
 names, and symlinks that resolve outside the workspace. Writes re-check the
-resolved path after creating parents and replace via a temporary file. The
-current implementation is not based on directory handles/openat-style
-operations, so it is not claimed to eliminate every concurrent filesystem race.
+resolved path after creating parents, and replace through a temporary file. The
+current implementation is not based on directory handles / openat-style
+operations, so I do not claim it eliminates every concurrent filesystem race.
 
 ## Runtime IPC
 
@@ -36,7 +38,7 @@ as a protocol error; oversized Python-worker input is rejected and discarded
 through the next newline so the stream can resynchronize. The worker is
 supervised and killed on protocol errors.
 
-These limits mitigate memory exhaustion from oversized or queued messages; they
+These limits are about memory exhaustion from oversized or queued messages; they
 are not a substitute for authenticating the process endpoint. IPC uses local
 stdin/stdout pipes between the Rust runtime and the child process.
 
@@ -47,7 +49,7 @@ at 1 MB, and follow redirects by hand so every hop is re-checked. Two layers
 block local-network and metadata targets: a pre-flight check on the URL, and a
 DNS resolver that drops every private, loopback, or metadata address at the
 moment of connection. Because ureq connects to exactly the addresses the
-resolver returns, the vetted address is the one used, which closes the
+resolver returns, the vetted address is the one that gets used, which closes the
 DNS-rebinding window between a pre-flight check and the actual connection.
 Returned content is labelled untrusted before it enters any prompt; the runtime
 treats it as data, not instructions.
@@ -57,14 +59,14 @@ treats it as data, not instructions.
 Approval decisions are created once and cannot overwrite an existing decision.
 After a waiter consumes a decision, its pending request is removed, so a later
 decision attempt for that request is rejected. Approval files are local state;
-protection against another process with the same OS account and write access to
-the data directory is not provided.
+I do not provide protection against another process with the same OS account and
+write access to the data directory.
 
 ## Verification status
 
-Adversarial tests cover path traversal and symlink escapes, malformed and
+The adversarial tests cover path traversal and symlink escapes, malformed and
 oversized IPC, one-time approval decisions, and representative macOS sandbox
-denials. A mission-run record recovery test verifies interrupted runs can be
-closed, but exactly-once recovery of external side effects is not implemented.
-No macOS sandbox escape assessment or independent security audit has been
-performed.
+denials. A mission-run record recovery test verifies that interrupted runs can
+be closed, but exactly-once recovery of external side effects is not
+implemented. No macOS sandbox escape assessment or independent security audit
+has been performed.

@@ -1,14 +1,14 @@
 # Memory and stored state
 
 jarvS keeps state in two places: the Rust runtime's data directory and the
-Python worker's legacy home. Everything is local files on your machine. Nothing
-is sent anywhere. This document lists what is written, where, how long it stays,
-and how to read, export, or delete it.
+Python worker's legacy home. All of it is local files on your machine. Nothing
+is sent anywhere. This is the document that says what gets written, where it
+goes, how long it stays, and how to read, export, or delete it.
 
 ## Where it lives
 
-The Rust runtime uses the OS data-local directory (override with
-`JARVS_DATA_DIR`): `jarvs config show` prints the resolved paths.
+The Rust runtime uses the OS data-local directory (override it with
+`JARVS_DATA_DIR`). `jarvs config show` prints the resolved paths.
 
 | Path | Contents | Written by |
 |---|---|---|
@@ -16,8 +16,8 @@ The Rust runtime uses the OS data-local directory (override with
 | `<data>/logs/audit.log` | One JSON line per tool decision: tool name, argument *names*, path, decision, timestamp. No argument values | `audit.rs` |
 | `<data>/logs/worker.log` | The Python worker's stderr | worker process |
 
-The Python worker runs with `JARVIS_HOME` set by the runtime (standalone, it
-defaults to the project directory, override with `JARVIS_HOME`).
+The Python worker runs with `JARVIS_HOME` set by the runtime. On its own it
+defaults to the project directory, and you can override it with `JARVIS_HOME`.
 
 | Path | Contents | Written by |
 |---|---|---|
@@ -31,31 +31,34 @@ defaults to the project directory, override with `JARVIS_HOME`).
 
 ## What is stored
 
-- **Run history** (`runs`): mission id, source, task text, start and finish
-  times, status, and a summary truncated to 4000 characters.
-- **Queue and outbox**: task text and WhatsApp reply destinations, with a
-  `taken`/`sent` flag and a lease timestamp for retry after a crash.
-- **Journal**: the plan outcome of each run (what worked, what failed, the
-  result up to 600 characters), appended under a timestamped heading.
-- **Audit log**: decisions only. Argument values, file contents, and message
-  bodies are never recorded. See `audit.rs`.
+The run history (`runs`) holds, per run, the mission id, source, task text,
+start and finish times, status, and a summary truncated to 4000 characters.
 
-The journal and run summaries can contain task text and model output, so treat
-them as you would any notes file.
+The queue and outbox hold task text and WhatsApp reply destinations, each with a
+`taken`/`sent` flag and a lease timestamp so a job can be retried after a crash.
+
+The journal holds the plan outcome of each run (what worked, what failed, the
+result up to 600 characters), appended under a timestamped heading.
+
+The audit log holds decisions only. Argument values, file contents, and message
+bodies are never recorded. See `audit.rs`.
+
+One thing to keep in mind: the journal and the run summaries can contain task
+text and model output, so treat them the way you would any notes file.
 
 ## Retention and deletion
 
 Nothing expires on its own. Records stay until you delete them.
 
-- `runs`, `queue`, and `outbox` grow until pruned. There is no automatic
-  rotation on the SQLite tables yet (planned; see [ROADMAP.md](ROADMAP.md)).
+- `runs`, `queue`, and `outbox` grow until you prune them. There is no automatic
+  rotation on the SQLite tables yet (it is planned; see [ROADMAP.md](ROADMAP.md)).
 - `jarvs.log` rotates at 5 MB and keeps 3 backups. `audit.log`, `worker.log`,
   and `commands.log` are append-only and do not rotate.
-- The journal is append-only Markdown; delete a mission's memory by removing its
+- The journal is append-only Markdown; to delete a mission's memory, remove its
   `.md` file.
 
 To wipe everything: stop the daemon, then delete the runtime data directory and
-the worker home shown by `jarvs config show`.
+the worker home that `jarvs config show` prints.
 
 ## Inspecting and exporting
 
@@ -68,8 +71,9 @@ the worker home shown by `jarvs config show`.
 
 ## Trust note
 
-The journal is read back into future prompts. It is the agent's own past
-output, not external input, but it is still data: a tool call is still gated by
-the Rust runtime regardless of what a journal entry suggests. Mission ids are
-reduced to a safe filename before they reach disk, so a stray `..` in
-`missions.yaml` cannot redirect a journal write outside the journal directory.
+The journal gets read back into future prompts. It is the agent's own past
+output, not external input, but it is still data, and I treat it that way: a
+tool call is still gated by the Rust runtime no matter what a journal entry
+suggests. Mission ids are reduced to a safe filename before they reach disk, so
+a stray `..` in `missions.yaml` cannot redirect a journal write outside the
+journal directory.

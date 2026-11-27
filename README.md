@@ -4,10 +4,8 @@
   <img src="assets/logo.svg" alt="jarvS logo" width="128">
 </p>
 
-<h3 align="center">Your machine. Your AI. Your rules.</h3>
-
 <p align="center">
-  A local-first AI agent built for autonomy, privacy, and control.
+  A local-first personal AI agent that runs on your own machine, under your own rules.
 </p>
 
 <p align="center">
@@ -19,17 +17,17 @@
 
 ---
 
-## What is jarvS?
+## What jarvS is
 
-jarvS is a personal AI agent that can think, use tools, manage tasks, and work autonomously on your machine.
+jarvS is a personal AI agent that can reason, use tools, manage tasks, and work
+on its own on your machine. The reasoning runs in Python on top of LangGraph and
+a local model served by Ollama. The execution runs in a Rust runtime that sits
+in front of every action the agent wants to take.
 
-It combines a **Rust execution runtime** with a **Python reasoning agent** powered by LangGraph and local language models through Ollama.
-
-Unlike a typical AI wrapper, jarvS separates intelligence from execution.
-
-The model proposes actions. The Rust runtime decides whether they happen.
-
-**Autonomy without giving up control.**
+The reason I split it that way is simple: I did not want the model to be the
+thing that decides what actually happens. The model proposes an action, and the
+Rust runtime decides whether it runs. So the agent can work without supervision,
+but it cannot step outside the boundaries the runtime enforces.
 
 ## At a glance
 
@@ -37,7 +35,9 @@ The model proposes actions. The Rust runtime decides whether they happen.
 |---|---|---|---|
 | **jarvS** | Local-first personal AI agent: Python reasoning, Rust-gated execution, permissioned tools, WhatsApp control | Rust · Python · LangGraph · Ollama · SQLite | [Recorded session](docs/DEMO.md) · [See it run](#see-it-run) |
 
-> No hosted link: jarvS runs on your own machine. The reproducible local demo is the recorded session in [`docs/DEMO.md`](docs/DEMO.md), summarized with a dashboard screenshot under [See it run](#see-it-run).
+> There is no hosted link, because jarvS runs on your own machine. The closest
+> thing to a live demo is the recorded session in [`docs/DEMO.md`](docs/DEMO.md),
+> summarized with a dashboard screenshot under [See it run](#see-it-run).
 
 ## See it run
 
@@ -45,7 +45,10 @@ The model proposes actions. The Rust runtime decides whether they happen.
   <img src="assets/screenshots/dashboard.png" alt="jarvS read-only dashboard after a task" width="720">
 </p>
 
-A recorded session ([docs/DEMO.md](docs/DEMO.md)) on an 8 GB Apple M3 with a 3B local model: the agent tries to write a file outside its workspace, the call is held for approval, the workspace guard still blocks it after approval, a retry is denied, and every decision lands in the audit log.
+Here is a recorded session ([docs/DEMO.md](docs/DEMO.md)) on an 8 GB Apple M3
+with a 3B local model. The agent tries to write a file outside its workspace,
+the call is held for approval, the workspace guard still blocks it after
+approval, a retry is denied, and every decision lands in the audit log.
 
 ```console
 $ jarvs run 'Create a file named hello.txt in the workspace containing the text: hello from jarvS'
@@ -60,21 +63,21 @@ status: Incomplete, 3 tool call(s)
 
 ## Features
 
-- **Local AI:** Run models through Ollama, with separate planning and fast models.
-- **Controlled execution:** Every tool call passes through the Rust runtime.
-- **Permission system:** Allow, approve, or deny individual capabilities.
-- **Human approval:** Review sensitive actions before execution.
-- **Autonomous missions:** Schedule recurring objectives with configurable work cycles.
-- **Persistent memory:** SQLite-backed history, journal, queues, and mission state.
-- **Messaging:** Send tasks and receive results through WhatsApp.
-- **Web research:** Search the web, news, and fetch public pages.
-- **Hardware awareness:** Inspect system resources and estimate suitable model sizes.
-- **Audit logging:** Record execution decisions without storing message bodies or file contents.
-- **Dashboard:** Inspect recent activity through a local, read-only interface.
+- Local inference through Ollama, with separate planning and fast models.
+- Every tool call passes through the Rust runtime before it runs.
+- A permission system that can allow, require approval for, or deny each capability.
+- Human approval for sensitive actions, reviewed before they execute.
+- Autonomous missions: recurring objectives on a configurable work cycle.
+- Persistent memory in SQLite: history, journal, queues, and mission state.
+- Messaging over WhatsApp, so you can send tasks and get results.
+- Web research: search the web and news, and fetch public pages.
+- Hardware awareness: it inspects system resources and estimates a model size that fits.
+- Audit logging that records execution decisions without storing message bodies or file contents.
+- A local, read-only dashboard for inspecting recent activity.
 
 ## Feature maturity
 
-Status is honest about what has actually run. Implemented means built and
+I try to be honest here about what has actually run. Implemented means built and
 covered by tests or a recorded run. Experimental means it works but has a known
 limitation. Planned means not built yet.
 
@@ -94,18 +97,21 @@ limitation. Planned means not built yet.
 
 ## jarvS and Venus Agent
 
-jarvS is the end-user assistant: an opinionated personal agent you run on your
-own machine, with WhatsApp control, standing missions, and a fixed tool set.
+A quick note on naming, because it comes up. jarvS is the assistant: the
+opinionated personal agent you run on your own machine, with WhatsApp control,
+standing missions, and a fixed set of tools.
 
-Venus Agent is the reusable runtime underneath that idea: the permission gate,
-IPC boundary, and native tool execution as a library other projects can build
-on. jarvS is one application of that runtime, not the runtime itself. If you
-want the assistant, use jarvS. If you want to embed gated execution in your own
-agent, that is Venus Agent's job.
+Venus is the name I use for the reusable part underneath that idea, the piece
+that is actually interesting to lift out on its own: the permission gate, the
+IPC boundary, and native tool execution as a library other projects could build
+on. For now it lives inside this repo rather than as a separate library. jarvS
+is one application of it. So if you want the assistant, that is jarvS. If you
+ever want to embed gated execution in your own agent, that is the part I think
+of as Venus.
 
 ## Architecture
 
-jarvS has three main layers:
+jarvS has three main layers.
 
 ```mermaid
 flowchart TD
@@ -139,7 +145,8 @@ flowchart TD
 | Python | Reasoning, planning, memory, missions |
 | Ollama | Local model inference |
 
-The Python agent never executes native tools directly. It requests actions through a JSON-based IPC protocol, and Rust makes the execution decision.
+The Python agent never runs a native tool directly. It asks for an action over
+a JSON-based IPC protocol, and Rust makes the call on whether it happens.
 
 ## Quick start
 
@@ -180,7 +187,7 @@ cp missions.example.yaml missions.yaml
 ollama pull qwen3:4b
 ```
 
-Configure your models in `.env`:
+Then point your models at it in `.env`:
 
 ```env
 JARVIS_PLAN_MODEL=qwen3:4b
@@ -197,12 +204,13 @@ JARVIS_FAST_MODEL=qwen3:4b
 
 ## Installation
 
-For a complete setup, review the configuration files and local runtime docs in this repository:
+For a full setup, the configuration files and runtime docs in this repo are the
+place to look:
 
 - `env.example` for environment variables and model selection
 - `missions.example.yaml` as the starting point for autonomous work
-- `docs/ARCHITECTURE.md` and `docs/IPC_PROTOCOL.md` for runtime and protocol details
-- `docs/PROJECT_AUDIT.md` for current security protections and known limitations
+- `docs/ARCHITECTURE.md` and `docs/IPC_PROTOCOL.md` for the runtime and the protocol
+- `docs/PROJECT_AUDIT.md` for the current security protections and known limitations
 
 ## Commands
 
@@ -220,7 +228,8 @@ For a complete setup, review the configuration files and local runtime docs in t
 
 ## Security by design
 
-jarvS is designed around a simple principle: **the model is not the authority.**
+The whole design rests on one idea: the model is not the authority. Concretely,
+that means:
 
 - Every native tool call passes through Rust.
 - File operations are confined to a designated workspace.
@@ -230,9 +239,12 @@ jarvS is designed around a simple principle: **the model is not the authority.**
 - Tool decisions are recorded in an audit log.
 - Untrusted web content is treated as data, not instructions.
 
-Security boundaries are enforced by the runtime rather than relying on prompt instructions.
+These boundaries are enforced by the runtime, not by asking the model nicely in
+a prompt.
 
-See [Security boundaries](docs/SECURITY.md) for platform-specific guarantees and limitations, and the [Project Audit](docs/PROJECT_AUDIT.md) for implementation context.
+See [Security boundaries](docs/SECURITY.md) for the platform-specific guarantees
+and limitations, and the [Project Audit](docs/PROJECT_AUDIT.md) for the
+implementation context.
 
 ## Platform support
 
@@ -244,9 +256,11 @@ See [Security boundaries](docs/SECURITY.md) for platform-specific guarantees and
 
 CI runs the Rust and Python test suites on all three platforms on every push.
 
-**Hardware actually tested end to end:** Apple M3, 8 GB unified memory, macOS 27.2, Ollama with `qwen2.5-coder:3b` ([session](docs/DEMO.md)). Linux and Windows have passed CI but have not had a full end-to-end run with a local model yet.
-
-CI coverage does not imply that every integration is supported on every platform.
+The only configuration I have actually run end to end is an Apple M3 with 8 GB
+of unified memory, macOS 27.2, and Ollama with `qwen2.5-coder:3b`
+([session](docs/DEMO.md)). Linux and Windows pass CI but have not had a full
+end-to-end run with a local model yet, so CI coverage is not the same as saying
+every integration works on every platform.
 
 ## Documentation
 
@@ -284,10 +298,6 @@ that license.
 Copyright © 2026 Aymane Amounas.
 
 ---
-
-<p align="center">
-  Built with curiosity. Engineered with purpose.
-</p>
 
 <p align="center">
   <sub>Built by <a href="https://github.com/aymane-amounas/jarvS">Aymane</a></sub>

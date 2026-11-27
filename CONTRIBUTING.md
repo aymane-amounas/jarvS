@@ -1,7 +1,8 @@
 # Contributing
 
-Contributions are welcome. Keep changes focused, add tests for behavior
-changes, and document verification and platform limitations in pull requests.
+Contributions are welcome. What I ask: keep changes focused, add tests when you
+change behavior, and write down how you verified it and any platform limits in
+the pull request.
 
 ## Contributor rights and licensing
 

@@ -2,11 +2,14 @@
 
 ## Reporting a vulnerability
 
-Please **do not** open a public issue for security problems.
+Please do not open a public issue for a security problem.
 
-Report privately through GitHub: **Security → Report a vulnerability** on this repository ([direct link](https://github.com/aymane-amounas/jarvS/security/advisories/new)). Include the version, steps to reproduce, and the impact you observed.
+Report it privately through GitHub instead: **Security → Report a vulnerability**
+on this repository ([direct link](https://github.com/aymane-amounas/jarvS/security/advisories/new)).
+Include the version, the steps to reproduce, and the impact you saw.
 
-You should get a first response within 7 days. Fixes are released as soon as practical, and reporters are credited unless they prefer otherwise.
+You should get a first response within 7 days. I release fixes as soon as I
+practically can, and I credit reporters unless they would rather I did not.
 
 ## Supported versions
 

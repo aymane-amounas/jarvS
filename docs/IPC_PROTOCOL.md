@@ -1,26 +1,27 @@
 # jarvS runtime ↔ Python worker protocol (v1)
 
-Transport: the Rust runtime spawns `python -u ipc_worker.py` and exchanges **one JSON
-object per line** on the worker's stdin/stdout, UTF-8. The worker's stderr is its log
-(`<data>/logs/worker.log`). The worker redirects `print` output to stderr so nothing
-else can reach the protocol stream.
+This is the protocol between the Rust runtime and the Python worker. The runtime
+spawns `python -u ipc_worker.py` and the two exchange **one JSON object per
+line** on the worker's stdin/stdout, UTF-8. The worker's stderr is its log
+(`<data>/logs/worker.log`). The worker redirects `print` output to stderr so
+nothing stray can leak into the protocol stream.
 
-Every message carries `"v": 1` and a `"type"`. A message with another version, or a line
-that is not a JSON object, is answered with an `error` and ignored. Unknown fields are
-ignored. Unknown types are errors.
+Every message carries `"v": 1` and a `"type"`. A message with another version,
+or a line that is not a JSON object, gets an `error` back and is ignored.
+Unknown fields are ignored. Unknown types are errors.
 
-Implementations: `crates/jarvs-core/src/ipc.rs` (types), `worker.rs` (runtime side),
-`ipc_worker.py` (worker side).
+The implementations are in `crates/jarvs-core/src/ipc.rs` (types), `worker.rs`
+(runtime side), and `ipc_worker.py` (worker side).
 
 ## Lifecycle
 
-1. Runtime spawns the worker with `JARVS_IPC=1`, `JARVIS_HOME=<legacy agent state dir>`.
-2. Worker sends `ready`. The runtime waits at most 60 s, then fails with a startup timeout.
+1. The runtime spawns the worker with `JARVS_IPC=1` and `JARVIS_HOME=<legacy agent state dir>`.
+2. The worker sends `ready`. The runtime waits at most 60 s, then fails with a startup timeout.
 3. Any number of `task.run` exchanges, one at a time. `ping` works at any time, even mid-task.
-4. Runtime sends `shutdown` and waits 3 s, then kills the process. Closing stdin has the same effect.
+4. The runtime sends `shutdown` and waits 3 s, then kills the process. Closing stdin has the same effect.
 
-The worker is never assumed to be alive. EOF on its stdout, or a failed write, ends any
-pending wait with `Exited(status)`.
+The runtime never assumes the worker is alive. EOF on its stdout, or a failed
+write, ends any pending wait with `Exited(status)`.
 
 ## Messages
 
@@ -48,13 +49,14 @@ pending wait with `Exited(status)`.
 ### Tool outcomes
 
 - `executed`: the runtime ran the tool itself. `output` is the result.
-- `delegate`: the owner approved it; the worker runs its own implementation.
+- `delegate`: the owner approved it, so the worker runs its own implementation.
   Only approval-only tools the policy marks `Delegate` can get this outcome. See ARCHITECTURE.md.
 - `denied`: `output` explains why. The agent sees `denied by jarvS policy: <reason>`.
 
-In IPC mode, the worker's **only** path to a tool is `tool.request`: `ipc_worker.py`
-replaces `tools.run_tool` with the protocol call for the duration of a task. A worker
-that gets no `tool.response` within 300 s treats the call as denied.
+In IPC mode, the worker's **only** path to a tool is `tool.request`:
+`ipc_worker.py` replaces `tools.run_tool` with the protocol call for the
+duration of a task. If a worker gets no `tool.response` within 300 s, it treats
+the call as denied.
 
 ## Timeouts and cancellation
 
@@ -65,7 +67,7 @@ that gets no `tool.response` within 300 s treats the call as denied.
   The worker then sends `task.result` with `status: cancelled`.
 - If no result arrives within 5 s, the runtime kills the process. Tool requests that
   race the cancel are answered `denied`.
-- A long LLM call has no cancellation point inside it. That case is covered by the kill.
+- A long LLM call has no cancellation point inside it, which is the case the kill covers.
 - Ctrl-C/SIGTERM are handled by the runtime, which cancels over the protocol; the worker
   ignores SIGINT. If the runtime disappears (stdin closes), the worker cancels its task.
 
@@ -83,6 +85,6 @@ that gets no `tool.response` within 300 s treats the call as denied.
 
 ## Versioning
 
-Breaking changes bump `v`. The runtime refuses a `ready` with a different `protocol`
-value. Adding optional fields or new message types the other side may ignore is not
-breaking.
+A breaking change bumps `v`. The runtime refuses a `ready` with a different
+`protocol` value. Adding optional fields, or new message types the other side
+can ignore, is not breaking.
