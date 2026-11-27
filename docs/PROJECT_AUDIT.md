@@ -1,8 +1,8 @@
 # jarvS project audit
 
-Audit date: 2026-11-08. Scope: every tracked file, Git history (1 commit), and the
-running code on macOS 27.2 (arm64). Findings were verified against the source, not
-taken from earlier reviews.
+Audit date: 2026-11-08. Scope: every tracked file, the Git history (1 commit),
+and the running code on macOS 27.2 (arm64). I verified the findings against the
+source rather than taking them from earlier reviews.
 
 ## Prior review findings: verified
 
@@ -17,17 +17,17 @@ taken from earlier reviews.
 | 7 | Gmail/browser not wired into the worker | Yes. `gmail_setup.py` exists, no Gmail tool is registered, Playwright is installed but unused | Unchanged. Documented as not implemented |
 | 8 | Personal/runtime files tracked | Yes: `bookmarks.html`, `checkpoints.db-wal/-shm`, `missions.yaml`, plus `analysis_results.txt` and `mt5_gold_data_fetcher.sh` (agent output) | Untracked and ignored; still present in history (see below) |
 
-Additional findings:
+A few more things turned up while I was in there:
 
 - `run_project_checks` was listed in the agent prompt but missing from the tool registry. Fixed.
-- RAM detection reported nothing on macOS: `SC_AVPHYS_PAGES` raised, wiping both values. Fixed.
+- RAM detection reported nothing on macOS: `SC_AVPHYS_PAGES` raised, which wiped both values. Fixed.
 - Custom-tool source validation is not a sandbox. Custom tools now fail closed unless a platform isolation backend is available: Seatbelt on macOS and Bubblewrap on Linux; Windows execution remains disabled. See [SECURITY.md](SECURITY.md) for the limits and test evidence.
-- Several agent safety rules (autonomy policy, "never use sudo") existed only as prompt text. The Rust gate now enforces the tool-level ones.
+- Several agent safety rules (the autonomy policy, "never use sudo") existed only as prompt text. The Rust gate now enforces the tool-level ones.
 
 ## Git history and secrets
 
-- Scanned all history for API-key, token, Telegram bot-token, Google key, and Slack token patterns: **0 matches**. The only WhatsApp JID matches are code that checks JID suffixes.
-- With the owner's authorization, history was rewritten to a single initial commit without `bookmarks.html`, the personal `missions.yaml`, the SQLite WAL/SHM files, or agent output files. Those local files were moved to the macOS Trash.
+- I scanned all history for API-key, token, Telegram bot-token, Google key, and Slack token patterns: **0 matches**. The only WhatsApp JID matches are code that checks JID suffixes.
+- With the owner's authorization, the history was rewritten to a single initial commit without `bookmarks.html`, the personal `missions.yaml`, the SQLite WAL/SHM files, or agent output files. Those local files were moved to the macOS Trash.
 - License: none existed. The sole author (Aymane Amounas) chose Apache-2.0.
 
 ## Existing capabilities (Python)
@@ -54,10 +54,10 @@ Additional findings:
 ## Platform dependencies
 
 - Linux-only: `install.sh`, `deploy.sh` (apt, systemd, `sed -i`), `systemd/*.service`.
-- Cross-platform now: `runtime.py`, `tools/`, prompts, and the whole Rust workspace.
-- macOS sandbox behavior has local adversarial smoke tests; these do not establish sandbox escape resistance.
+- Cross-platform now: `runtime.py`, `tools/`, the prompts, and the whole Rust workspace.
+- macOS sandbox behavior has local adversarial smoke tests; those do not establish sandbox escape resistance.
 - Linux isolation uses Bubblewrap when installed and still needs CI validation. Windows custom-tool execution is disabled pending an AppContainer or equivalent backend.
-- The latest macOS CI attempt failed before project tests because the runner could not resolve PyPI and GitHub action archive hosts; the run is not evidence of a source failure or a passing macOS check.
+- The latest macOS CI attempt failed before the project tests because the runner could not resolve PyPI and GitHub action archive hosts, so that run is not evidence of a source failure or a passing macOS check.
 
 ## Test results (2026-11-08, macOS arm64)
 

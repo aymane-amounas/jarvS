@@ -1,8 +1,8 @@
 # jarvS architecture
 
-jarvS is moving from a Python prototype to a Rust runtime that hosts the existing
-Python agent. Rust owns everything sensitive or long-lived. Python keeps only the
-agent reasoning it already does well.
+jarvS started as a Python prototype and is moving to a Rust runtime that hosts
+that same Python agent. The idea is that Rust owns everything sensitive or
+long-lived, and Python keeps only the reasoning it was already good at.
 
 ```
             ┌──────────────────────── jarvs (Rust) ─────────────────────────┐
@@ -26,12 +26,14 @@ agent reasoning it already does well.
 | `ipc_worker.py` | Python side of the bridge; hosts the `graph` agent and a dependency-free `selftest` agent |
 | other `*.py`, `tools/`, `channels/` | The original Python implementation, preserved |
 
-There are three crates, not the twelve sketched in the vision document. A crate is split
-off when a second consumer needs it (the API server, a Tauri shell), not before.
+There are three crates here, not the twelve the vision document sketched. I
+split a crate off when a second consumer actually needs it (the API server, a
+Tauri shell), not before that.
 
 ## Ownership during the migration
 
-Every responsibility has exactly one owner.
+I wanted every responsibility to have exactly one owner, so there is no question
+about who decides what.
 
 | Responsibility | Owner now | Target |
 |---|---|---|
@@ -49,31 +51,35 @@ Every responsibility has exactly one owner.
 | Queue/mission selection logic | Python (`worker.run_next`, `memory.py`), always run under the gate | Rust (P6) |
 | WhatsApp | Python + Node (Baileys) | Same code behind the Rust channel interface (P5) |
 
-**Delegation is limited to approval-only tools.** Every delegated tool requires the
-owner's explicit yes per call. Except for custom tools, approved delegated tools still
-run in Python with the account's rights. Custom Python tools use the platform-specific
-isolation described in [SECURITY.md](SECURITY.md); execution fails closed where no
-backend is available.
+Delegation is deliberately limited to approval-only tools. Every delegated tool
+needs the owner's explicit yes per call. Except for custom tools, an approved
+delegated tool still runs in Python with the account's rights. Custom Python
+tools use the platform-specific isolation described in [SECURITY.md](SECURITY.md),
+and execution fails closed where no backend is available.
 
-**All agent entry points are mediated.** `jarvs run` runs one task; `jarvs daemon`
-runs the queue/mission loop that WhatsApp messages feed (`channels/wa.py` only enqueues).
-`worker.py` refuses to run the agent itself unless `JARVIS_LEGACY_UNMEDIATED=1` is set
-as a deliberate escape hatch.
+Every agent entry point is mediated. `jarvs run` runs one task, and `jarvs
+daemon` runs the queue/mission loop that WhatsApp messages feed (`channels/wa.py`
+only enqueues). `worker.py` refuses to run the agent itself unless
+`JARVIS_LEGACY_UNMEDIATED=1` is set, which is there as a deliberate escape hatch,
+not a normal path.
 
 ## Paths
 
-`AppPaths::discover()` follows each OS's conventions:
+`AppPaths::discover()` follows each OS's own conventions:
 
 | | macOS | Linux | Windows |
 |---|---|---|---|
 | config | `~/Library/Application Support/dev.jarvS.jarvs` | `~/.config/jarvs` | `%APPDATA%\jarvS\jarvs\config` |
 | data, logs, workspace | `~/Library/Application Support/dev.jarvS.jarvs` | `~/.local/share/jarvs` | `%LOCALAPPDATA%\jarvS\jarvs\data` |
 
-`JARVS_CONFIG_DIR` and `JARVS_DATA_DIR` override them (portable installs, tests). The agent's
-workspace defaults to `<data>/workspace`, separate from jarvS's own files. Legacy agent
-state (`state.db`, `missions.yaml`) stays in `JARVIS_HOME` until P6 migrates it.
+`JARVS_CONFIG_DIR` and `JARVS_DATA_DIR` override them, which is handy for
+portable installs and tests. The agent's workspace defaults to `<data>/workspace`,
+kept separate from jarvS's own files. Legacy agent state (`state.db`,
+`missions.yaml`) stays in `JARVIS_HOME` until P6 migrates it.
 
 ## Dependencies chosen (and not)
+
+These are the crates I pulled in, and why:
 
 | Crate | Why |
 |---|---|
@@ -84,6 +90,9 @@ state (`state.db`, `missions.yaml`) stays in `JARVIS_HOME` until P6 migrates it.
 | `sysinfo` (features `system`, `disk` only) | Cross-platform RAM/CPU/disk |
 | `directories` | OS application directories |
 
-Deferred until a real need exists: **Tokio/Axum** (the CLI is synchronous; added with the
-local API in P4/P8), **rusqlite** (with Rust-owned storage in P6), **reqwest** (only if the async provider layer in P4 needs it), **tracing** (the JSON-lines audit log covers current needs),
-**keyring** (P3), **Rig** (P9, only if measurably better), **Tauri** (P8, after the API is stable).
+And the ones I am holding off on until there is a real need for them:
+**Tokio/Axum** (the CLI is synchronous; it comes with the local API in P4/P8),
+**rusqlite** (with Rust-owned storage in P6), **reqwest** (only if the async
+provider layer in P4 needs it), **tracing** (the JSON-lines audit log covers
+what I need now), **keyring** (P3), **Rig** (P9, and only if it is measurably
+better), **Tauri** (P8, after the API is stable).
